@@ -139,3 +139,34 @@ tests/testing_data/*Hippocampus*
 
 # Temporary workspace
 tmp_*_dir/
+
+# 실험 결과 및 로그 폴더 (너 프로젝트 기준)
+wandb/
+checkpoints/
+output/
+save_code/
+logs/
+data_cache/
+tmp/
+Experiments/
+
+# 이전 깃클론땜에 파일들
+assets/
+config/
+notebook/
+results/
+scripts/
+tutorials/
+LICENSE
+main.py
+model_swinvit.pt
+inferer.py
+README_past.md
+past/
+api/background/
+
+# 모델 파일
+*.pth
+*.pt
+*.npz
+*.npy

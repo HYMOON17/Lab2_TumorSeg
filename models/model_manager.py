@@ -4,7 +4,7 @@ import logging
 import torch.nn as nn
 from utils.logger import get_logger
 
-logger = get_logger()
+
 ###
 # detr등 다른 모델들도 추가해서 확인할 수 있으면 함
 ###
@@ -38,6 +38,7 @@ def build_model(config: Dict, device: torch.device):
     return model
 
 def load_model_weights(model, weight_path: str, device: torch.device):
+    logger = get_logger()
     model.load_state_dict(torch.load(weight_path, map_location=device)['model_state_dict'], strict=False)
     # model.load_from(weights=weight)
     logger.info(f"Model weights loaded from: {weight_path}")  # 모델 로드 경로 출력

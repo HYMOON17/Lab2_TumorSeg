@@ -3,17 +3,14 @@ import os
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import pprint
+
 import argparse
-import time
-import math
 import numpy as np
 import torch
 import os
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
-import yaml
-import random 
+from tqdm import tqdm
+
 from typing import Dict, List, Tuple, Any
 from sklearn.manifold import TSNE 
 from sklearn.decomposition import PCA
@@ -38,15 +35,14 @@ from monai.inferers import sliding_window_inference
 
 import sys
 sys.path.append('/data/hyungseok/Swin-UNETR')
-from utils.my_utils import *
-
+from utils.my_utils import load_config
+from utils.seed import set_seed_and_env, set_all_random_states
+from utils.logger import log_experiment_config, get_logger, setup_logging, save_config_as_json, save_current_code
 parser = argparse.ArgumentParser(description="Swin UNETR training")
 parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/tsne.yaml", help="Path to the YAML config file")
 args = parser.parse_args()
 # YAML 설정 파일 로드
-def load_config(config_path):
-    with open(config_path, 'r') as file:
-        return yaml.safe_load(file)
+
 # 학습 설정 로드
 config_path = args.config
 config = load_config(config_path)
@@ -55,21 +51,13 @@ from datetime import datetime
 date = datetime.now().strftime("%Y-%m-%d_%H-%M")
 output_dir = os.path.join("/data/hyungseok/Swin-UNETR/scripts/tsne_debug_analysis",date)
 os.makedirs(output_dir, exist_ok=True)
+setup_logging(output_dir)
+logger = get_logger
 save_config_as_json(config, output_dir)
 current_script_name = __file__
 save_current_code(output_dir,current_script_name)
 ### 시드 고정
-set_determinism(seed=config['train_params']['seed']) # 5개 융합
-torch.manual_seed(config['train_params']['seed'])
-torch.cuda.manual_seed(config['train_params']['seed'])
-torch.cuda.manual_seed_all(config['train_params']['seed'])
-random.seed(config['train_params']['seed'])
-np.random.seed(config['train_params']['seed'])
-cudnn.benchmark = config['cuda']['benchmark']
-cudnn.deterministic = config['cuda']['deterministic']
-
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, config['cuda']['CUDA_VISIBLE_DEVICES']))
+set_seed_and_env(config)
 USE_CUDA=torch.cuda.is_available()
 device=torch.device("cuda" if USE_CUDA else "cpu")
 

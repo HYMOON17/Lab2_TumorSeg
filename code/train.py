@@ -39,7 +39,7 @@ from loader import load_datalist
 from models.model_manager import build_model,load_model_pretrained_weights
 from losses.build_loss import build_loss
 def main():
-    logger = get_logger()
+    
     parser = argparse.ArgumentParser(description="Swin UNETR training")
     parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/exp_cont.yaml", help="Path to the YAML config file")
     args = parser.parse_args()
@@ -62,6 +62,7 @@ def main():
 
     # 로그 설정: log_dir에 로그 저장
     setup_logging(log_dir)
+    logger = get_logger()
     # config 파일을 JSON으로 저장
     log_experiment_config()
     save_config_as_json(config, log_dir)

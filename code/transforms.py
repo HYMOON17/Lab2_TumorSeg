@@ -309,6 +309,9 @@ def postprocess(batch, post_pred_transform):
 
     추가 확인해야하는 부분들은 .cpu가 sliding에서 작업하는게 나을지 여기단에서 할지등임
     """
+    if post_pred_transform is None:
+        raise ValueError("[Postprocess] Post-transform is None. Check tf_dict or config settings.")
+
     single_item = [post_pred_transform(i) for i in decollate_batch(batch)]
     test_outputs_convert, test_labels_convert = from_engine(["pred", "label"])(single_item)
 

@@ -1,112 +1,65 @@
-<div align="center">
 
-  <h1>[MED] [3D] [SEG] Swin UNETR</h1>
-  <p>This repository contains the code for self-supervised pre-training of Swin UNETR model for medical image segmentation. In this readme, you will find a description of Swin UNETR, examples of how to use the code, and links to our datasets and weights.</p>
+# 🧠 Swin-UNETR 기반 다기관 종양 분할 실험
 
-</div>
+본 프로젝트는 Swin UNETR 기반 모델을 확장하여 간/폐 종양에 대한 다양한 실험을 진행하는 연구 코드입니다.
 
-<div align="center">
-  
-  <a href="https://arxiv.org/pdf/2201.01266v1.pdf">![arXiv](https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg)</a>
-  <a href="https://colab.research.google.com/drive/1IqdpUPM_CoKYj6EHNb-IYaCiHvEiM08D">![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)</a>
-  <a href="https://colab.research.google.com/drive/1_kk_t38QRfzP0bbdXeGgJQvVCPRIowXo">![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)</a>
+- **실험 목적**: 단일 모델 기반 multi-organ segmentation 성능 향상
+- **주요 내용**: Contrastive learning, Attention mechanism, Query-based 구조 비교
+- **목표**: 재현성, 확장성, 실험 자동화를 고려한 모듈화
 
-</div>
+---
 
-<hr />
+## 🗂️ 폴더 구조
 
-# What is Swin UNETR?
-Swin UNETR is the state-of-the-art on Medical Segmentation Decathlon (MSD) and Beyond the Cranial Vault (BTCV) Segmentation Challenge dataset. The architecture of Swin UNETR is illustrated below:
-
-![image](./assets/swin_unetr.png)
-
-For self-supervised pre-training, randomly cropped tokens are augmented with different transforms such as rotation and cutout and used
-for pre-text tasks such as masked volume inpainting and contrastive learning and rotation. An overview of the pre-training framework is presented
-in the following:
-
-![image](./assets/ssl_swin.png)
-
-The following demonstrates an animation of original images (left) and their reconstructions (right):
-
-![image](./assets/inpaint.gif)
-
-
-
-# Installing Dependencies
-Create conda env with yml file and activate
 ```
+.
+├── code/                   # train.py, test_main.py 등 실행 파이프라인 모듈
+├── models/                 # 다양한 Swin UNETR 변형 모델 정의
+├── losses/                 # Segmentation + Contrastive loss 정의
+├── utils/                  # 로깅, 시드 설정, 스케줄러 등 공용 유틸
+├── config/                 # 실험 공통 설정파일 디렉토리
+├── api/                    # 실험별 개별 yaml 구성 파일
+├── Experiments/            # 실험 결과, 로그 저장
+├── data_cache/             # MONAI PersistentDataset 캐시 경로
+└── environment.yml         # Conda 환경 설정 파일
+```
+
+---
+
+## ⚙️ 실험 실행 방법
+
+```bash
+# Conda 환경 준비
 conda env create -f environment.yml
 conda activate swin_unetr
+
+# 학습 실행
+python code/train.py --config api/exp_cont.yaml
+
+# 테스트 실행
+python code/test_main.py --config api/exp_cont.yaml
 ```
 
-# Pre-trained Models
+---
 
-We provide the self-supervised pre-trained weights for Swin UNETR backbone (CVPR paper [1]) in this <a href="https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/model_swinvit.pt"> link</a>.
-In the following, we describe steps for pre-training the model from scratch.
+## 🧪 실험 관리 전략
 
-# Datasets
+- 실험 단위로 `api/exp_*.yaml` 구성
+- 실험 결과는 `Experiments/<실험명>/날짜/` 구조로 저장
+- `wandb`를 통한 실험 로깅 + `npz`, `png` 저장 포함
+- `.gitignore`로 중간 결과 제외하여 깔끔한 버전 관리
 
-The following datasets were used for pre-training (~5050 3D CT images). Please download the corresponding the json files of each dataset for more details and place them in ```jsons``` folder:
+---
 
-- Head & Neck Squamous Cell Carcinoma (HNSCC) ([Link](https://wiki.cancerimagingarchive.net/display/Public/HNSCC)) ([Download json](https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/dataset_HNSCC_0.json))
-- Lung Nodule Analysis 2016 (LUNA 16) ([Link](https://luna16.grand-challenge.org/Data/)) ([Download json](https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/dataset_LUNA16_0.json))
-- TCIA CT Colonography Trial ([Link](https://wiki.cancerimagingarchive.net/display/Public/CT+COLONOGRAPHY/)) ([Download json](https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/dataset_TCIAcolon_v2_0.json))
-- TCIA Covid 19 ([Link](https://wiki.cancerimagingarchive.net/display/Public/CT+Images+in+COVID-19/)) ([Download json](https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/dataset_TCIAcovid19_0.json))
-- TCIA LIDC ([Link](https://wiki.cancerimagingarchive.net/display/Public/LIDC-IDRI/)) ([Download json](https://github.com/Project-MONAI/MONAI-extra-test-data/releases/download/0.8.1/dataset_LIDC_0.json))
+## 📌 Git 운영 규칙
 
+- `main` 브랜치는 정제된 코드만 반영
+- 실험별 브랜치는 필요시 분기
 
-# Training
+---
 
-## Distributed Multi-GPU Pre-Training
+## 🙋‍♂️ 작성자
 
-To pre-train a `Swin UNETR` encoder using multi-gpus:
-
-```bash
-python -m torch.distributed.launch --nproc_per_node=<Num-GPUs> --master_port=11223 main.py
---batch_size=<Batch-Size> --num_steps=<Num-Steps> --lrdecay --eval_num=<Eval-Num> --logdir=<Exp-Num> --lr=<Lr>
-```
-
-The following was used to pre-train Swin UNETR on 8 X 32G V100 GPUs:
-
-```bash
-python -m torch.distributed.launch --nproc_per_node=8 --master_port=11223 main.py
---batch_size=1 --num_steps=100000 --lrdecay --eval_num=500 --lr=6e-6 --decay=0.1
-```
-
-## Single GPU Pre-Training with Gradient Check-pointing
-
-To pre-train a `Swin UNETR` encoder using a single gpu with gradient-checkpointing and a specified patch size:
-
-```bash
-python main.py --use_checkpoint --batch_size=<Batch-Size> --num_steps=<Num-Steps> --lrdecay
---eval_num=<Eval-Num> --logdir=<Exp-Num> --lr=<Lr> --roi_x=<Roi_x> --roi_y=<Roi_y> --roi_z=<Roi_z>
-```
-
-# License
-See the [LICENSE](LICENSE) file for details
-
-
-# Citations
-If you find this repository useful, please consider citing UNETR paper:
-
-```
-@inproceedings{tang2022self,
-  title={Self-supervised pre-training of swin transformers for 3d medical image analysis},
-  author={Tang, Yucheng and Yang, Dong and Li, Wenqi and Roth, Holger R and Landman, Bennett and Xu, Daguang and Nath, Vishwesh and Hatamizadeh, Ali},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  pages={20730--20740},
-  year={2022}
-}
-
-@article{hatamizadeh2022swin,
-  title={Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images},
-  author={Hatamizadeh, Ali and Nath, Vishwesh and Tang, Yucheng and Yang, Dong and Roth, Holger and Xu, Daguang},
-  journal={arXiv preprint arXiv:2201.01266},
-  year={2022}
-}
-```
-
-# References
-[1]: Tang, Y., Yang, D., Li, W., Roth, H.R., Landman, B., Xu, D., Nath, V. and Hatamizadeh, A., 2022. Self-supervised pre-training of swin transformers for 3d medical image analysis. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (pp. 20730-20740).
-
-[2]: Hatamizadeh, A., Nath, V., Tang, Y., Yang, D., Roth, H. and Xu, D., 2022. Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images. arXiv preprint arXiv:2201.01266.
+문형석 / 인공지능 석사과정  
+📧 fbkevin@g.skku.edu  
+🔗 https://github.com/HYMOON17

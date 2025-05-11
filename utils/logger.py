@@ -95,10 +95,11 @@ def get_logger():
     return _logger
 
 def save_config_as_json(config, log_dir):
+    logger = get_logger()
     config_json_path = os.path.join(log_dir, "config.json")
     with open(config_json_path, 'w') as json_file:
         json.dump(config, json_file, indent=4)
-    logging.info(f"Configuration saved to {config_json_path}")
+    logger.info(f"Configuration saved to {config_json_path}")
 
 # 날짜 기반 하위 폴더 생성
 def generate_experiment_name(config):
@@ -112,6 +113,7 @@ def generate_experiment_name(config):
     return experiment_name
 
 def log_experiment_config():
+    logger = get_logger()
     exp_config = {
         "python_version": platform.python_version(),
         "cuda_version": torch.version.cuda if torch.cuda.is_available() else "CPU",
@@ -123,9 +125,9 @@ def log_experiment_config():
         "gpu_model": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
     }
     
-    logging.info("Experiment Configuration:")
+    logger.info("Experiment Configuration:")
     for key, value in exp_config.items():
-        logging.info(f"{key}: {value}")
+        logger.info(f"{key}: {value}")
         
         
 def save_current_code(output_dir, current_script_path=None, extra_files=None):
@@ -137,6 +139,7 @@ def save_current_code(output_dir, current_script_path=None, extra_files=None):
     :param extra_files: 추가로 저장할 파일 경로 리스트 (기본값: None)
     """
     # 저장 경로 생성
+    logger = get_logger()
     output_dir = os.path.join(output_dir,"save_code")
     os.makedirs(output_dir, exist_ok=True)
     
@@ -145,7 +148,7 @@ def save_current_code(output_dir, current_script_path=None, extra_files=None):
         current_script_name = os.path.basename(current_script_path)
         current_script_save_path = os.path.join(output_dir, current_script_name)
         shutil.copy(current_script_path, current_script_save_path)
-        print(f"Saved current script: {current_script_save_path}")
+        logger.info(f"Saved current script: {current_script_save_path}")
     
     # 추가 파일 저장
     if extra_files:
@@ -154,9 +157,61 @@ def save_current_code(output_dir, current_script_path=None, extra_files=None):
                 extra_file_name = os.path.basename(file_path)
                 extra_file_save_path = os.path.join(output_dir, extra_file_name)
                 shutil.copy(file_path, extra_file_save_path)
-                print(f"Saved extra file: {extra_file_save_path}")
+                logger.info(f"Saved extra file: {extra_file_save_path}")
             else:
-                print(f"Extra file not found or invalid: {file_path}")
+                logger.info(f"Extra file not found or invalid: {file_path}")
+
+def save_current_code_wandb(output_dir, current_script_path=None, extra_files=None, log_to_wandb=False, config=None):
+    """
+    현재 실행 중인 학습 스크립트와 추가 파일을 지정된 경로에 저장합니다.
+    선택적으로 wandb에도 코드 기록 가능.
+
+    :param output_dir: 로컬 저장 경로
+    :param current_script_path: 실행 중 스크립트 경로
+    :param extra_files: 추가로 저장할 파일 리스트
+    :param log_to_wandb: True일 경우 wandb에 코드 로그
+    :param config: wandb 업로드 시 사용할 config (tmp_dir 필요)
+    """
+    logger = get_logger()
+    save_dir = os.path.join(output_dir, "save_code")
+    os.makedirs(save_dir, exist_ok=True)
+
+    file_list = []
+
+    # 현재 실행 파일 저장
+    if current_script_path:
+        dst_path = os.path.join(save_dir, os.path.basename(current_script_path))
+        shutil.copy(current_script_path, dst_path)
+        file_list.append(dst_path)
+        logger.info(f"Saved current script: {dst_path}")
+
+    # 추가 파일 저장
+    if extra_files:
+        for file_path in extra_files:
+            if os.path.isfile(file_path):
+                dst_path = os.path.join(save_dir, os.path.basename(file_path))
+                shutil.copy(file_path, dst_path)
+                file_list.append(dst_path)
+                logger.info(f"Saved extra file: {dst_path}")
+            else:
+                logger.warning(f"Invalid extra file path: {file_path}")
+
+    # ✅ wandb 코드 업로드
+    if log_to_wandb and config is not None:
+        import wandb
+        import time
+
+        tmp_dir = config['data']['tmp_dir']
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        for file_path in file_list:
+            shutil.copy(file_path, tmp_dir)
+        wandb.run.log_code(tmp_dir)
+        logger.info(f"W&B: Logged code from {tmp_dir}")
+        time.sleep(5)  # 업로드 여유
+        shutil.rmtree(tmp_dir)
+        logger.info(f"W&B: Temporary code dir removed: {tmp_dir}")
+
 
 def compute_experiment_hash(config: dict) -> str:
     """
@@ -171,10 +226,6 @@ def compute_experiment_hash(config: dict) -> str:
 
 | 항목                                                   | 설명                                  | 권장 여부        |
 | ---------------------------------------------------- | ----------------------------------- | ------------ |
-| `save_config_as_json()`에서 `logging.info(...)` 사용     | 현재 `logger.info(...)`로 바꿔야 제대로 기록됨  | **수정 추천**    |
-| `log_experiment_config()`도 `logger.info(...)` 사용해야 함 | 현재는 전역 `logging` 호출 중 → 주의          | **수정 추천**    |
-| `get_logger()`를 내부 함수에서 명시적으로 사용                | `logger = get_logger()` 하고 쓰는 방식 권장 | **유지 or 반영** |
-| `save_current_code()`에서 `print()` → `logger.info()`  | 출력 일관성 유지                           | **가능하면 수정**  |
 | `compute_experiment_hash()` → 로그에 기록하는 라인 예시 추가해도 좋음 | 추적 편의성 향상                           | **optional** |
 
 
