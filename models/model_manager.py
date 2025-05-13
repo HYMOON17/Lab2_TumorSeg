@@ -38,6 +38,7 @@ def build_model(config: Dict, device: torch.device):
     return model
 
 def load_model_weights(model, weight_path: str, device: torch.device):
+    # test나 다른 로드 필요시
     logger = get_logger()
     model.load_state_dict(torch.load(weight_path, map_location=device)['model_state_dict'], strict=False)
     # model.load_from(weights=weight)
@@ -45,6 +46,7 @@ def load_model_weights(model, weight_path: str, device: torch.device):
     logger.info("Loading checkpoint... Well")
 
 def load_model_pretrained_weights(model, config,device: torch.device):
+    # 위 함수와 다르게 SwinUnetr 모델 코드내에 load_from사용
     weight = torch.load(config['data']['weights_path'])
     model.load_from(weights=weight)
     if torch.cuda.device_count() > 1:

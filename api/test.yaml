@@ -66,7 +66,7 @@ train_params:
 
 
 test_params : 
-  ckpt_dir : "/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss-patch64x64x64/2025-04-08_11-00/best_metric_model.pth"
+  ckpt_dir : "/data/hyungseok/Swin-UNETR/Experiments/Models/ContrastiveSwinUNETR-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-04-27_15-53/best_metric_model.pth"
   detr : "/data/hyungseok/Swin-UNETR/scripts/modelweight/detr/best_metric_model.pth"
   att_0313 : "/data/hyungseok/Swin-UNETR/scripts/modelweight/att/best_metric_model.pth"
   lung : "/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Lung-lr1e-4-bs6-lossDiceCELoss-patch64x64x64/2025-04-02_20-39/best_metric_model.pth"

@@ -8,6 +8,16 @@ data:
   liver_val_image_txt :  "/data/hyungseok/Swin-UNETR/notebook/tempp/liver_val.txt"
   lung_train_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung.txt"
   lung_val_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung_val.txt"
+  liver_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/train"
+  liver_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/raw"
+  liver_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/raw"
+  liver_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/process"
+  liver_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/train_check"
+  lung_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/train"
+  lung_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/raw"
+  lung_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/raw"
+  lung_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/process"
+  lung_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/train_check"
   save_dir: "/data/hyungseok/Swin-UNETR/Experiments/Models"
   log_dir : "/data/hyungseok/Swin-UNETR/Experiments/Logs"
   weights_path: "/data/hyungseok/Swin-UNETR/model_swinvit.pt"
@@ -53,7 +63,7 @@ train_params:
   seed: 1234                        # 랜덤 시드
   spatial_size: [64, 64, 64]          # 이미지 패치 크기         #### NAME
   num_samples: 4                    # 샘플 수 (데이터 증강 시)
-  loss_type: "DiceCELoss+Cont3"           # 손실 함수 종류         #### NAME
+  loss_type: "DiceCELoss+Cont1"           # 손실 함수 종류         #### NAME
   optim_type: "AdamW"               # 옵티마이저 종류
   learning_rate: 1e-4               # 학습률                #### NAME
   weight_decay: 1e-5
@@ -65,14 +75,14 @@ train_params:
   gradient_accumulation_steps : 3
 
 CONTRASTIVE:
-  TEMPERATURE : 0.07
+  TEMPERATURE : 0.1
   MAX_VIEWS : 256
   MAX_SAMPLES : 256
   BASE_TEMPERATURE : 0.07
   QUEUE_SIZE : 2560
   DIM : 128
   NUM_CLASSES : 2
-  MODE : 3
+  MODE : 1
   PIXEL_UPDATE_FREQ : 32
 
 
@@ -103,3 +113,4 @@ cuda:
   benchmark: False
   deterministic: true
   dist : False
+  mode : "server"

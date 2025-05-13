@@ -33,7 +33,7 @@ sys.path.append('/data/hyungseok/Swin-UNETR')
 from utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from utils.my_utils import load_config, prune_checkpoints
 from utils.seed import set_seed_and_env
-from utils.logger import generate_experiment_name, setup_logging, log_experiment_config, save_config_as_json, get_logger,save_current_code
+from utils.logger import generate_experiment_name, setup_logging, log_experiment_config, save_config_as_json, get_logger,save_current_code,save_current_code_wandb
 from transforms import get_test_transforms, postprocess
 from loader import load_datalist
 from models.model_manager import build_model,load_model_pretrained_weights
@@ -42,11 +42,12 @@ def main():
     
     parser = argparse.ArgumentParser(description="Swin UNETR training")
     parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/exp_cont.yaml", help="Path to the YAML config file")
+    parser.add_argument('--override', nargs='*', default=[], help="Override config parameters, e.g., train_params.batch_size=4")
     args = parser.parse_args()
 
     # 학습 설정 로드
     config_path = args.config
-    config = load_config(config_path)
+    config = load_config(config_path, overrides=args.override)
 
     # 학습환경 설정
     set_seed_and_env(config)
@@ -76,27 +77,10 @@ def main():
     # 기록하고 싶은 파일 리스트
     # Train, Trainer, model, loss 정도?
     # Model과 Trainer의 소스 파일 경로 가져오기
-    # file_list에 추가
-    file_list = []
-    # 현재 실행 중인 파일 추가 (__file__ 변수 사용)
-    if '__file__' in globals():
-        file_list.append(os.path.abspath(__file__))
-    # 임시 디렉토리 생성
-    tmp_dir = config['data']['tmp_dir']
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    # 파일 복사
-    for file_name in file_list:
-        shutil.copy(file_name, tmp_dir)
-    # 임시 디렉토리를 wandb에 기록
-    wandb.run.log_code(tmp_dir)
-    time.sleep(5)  # 짧게 여유를 줘서 업로드 완료 가능성 보장
-    # 사용 후 임시 디렉토리 삭제
-    shutil.rmtree(tmp_dir)
     
     current_script_name = __file__
-
-    save_current_code(log_dir,current_script_name)
+    # save_current_code(log_dir,current_script_name)
+    save_current_code_wandb(log_dir,current_script_name, log_to_wandb=True)
     
     print_config()
     
@@ -123,6 +107,43 @@ def main():
 
     # ### Training
 
+    max_epoch = config['train_params']['max_epoch']
+    eval_epoch = config['train_params']['eval_epoch']
+    seg_loss_fn, cont_loss_fn = build_loss(config)
+    if config['train_params']['optim_type'] == "AdamW":
+        optimizer = torch.optim.AdamW(model.parameters(), lr=float(config['train_params']['learning_rate']), weight_decay=float(config['train_params']['weight_decay']))
+    elif config['train_params']['optim_type'] == "SGD":
+        optimizer = torch.optim.SGD(model.parameters(), lr=float(config['train_params']['learning_rate']), momentum=0.9)
+    scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=config['train_params']['warmup'], max_epochs=config['train_params']['max_epoch'])
+    scaler = torch.cuda.amp.GradScaler() 
+    post_label = AsDiscrete(to_onehot=config['model_params']['out_channels']) # class n
+    post_pred = AsDiscrete(argmax=True, to_onehot=config['model_params']['out_channels']) # class n
+    dice_metric = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
+    temp_dice_metric = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
+    dice_metric_train = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
+    accumulation_steps = config['train_params']['gradient_accumulation_steps']
+    
+    epoch = 0
+    dice_val_best = 0.0
+    epoch_best = 0
+    epoch_loss_values = []
+    epoch_contrastive_loss_values=[]
+    train_metric_values =[]
+    metric_values = []
+    start_epoch = epoch  # resume 시: checkpoint['epoch'], fresh 시: 0
+    if config['train_params']['resume'] :
+        logger.info("Loading checkpoint...")
+        checkpoint = torch.load(config['train_params']['resume_path'])
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # 스케줄러 상태 복구
+        scaler.load_state_dict(checkpoint['scaler_state_dict'])
+        epoch = checkpoint['epoch']
+        start_epoch = checkpoint['epoch']
+        dice_val_best = checkpoint['best_dice']
+        logger.info(f"Resuming from epoch {epoch} with best dice {dice_val_best:.4f}")
+
+    
 
     def validation(epoch_iterator_val_liver, epoch_iterator_val_lung):
         model.eval()
@@ -152,6 +173,7 @@ def main():
         return mean_dice_val
 
     def train(epoch, liver_train_loader,lung_train_loader):
+        
         model.train()
         epoch_loss = 0
         epoch_contrastive_loss = 0
@@ -233,45 +255,12 @@ def main():
         epoch_loss /= (step+1)
         epoch_contrastive_loss /= (step + 1)  # contrastive loss의 에포크 평균 계산
         # Aggregate dice score
+        train_dice =0.0 # 에러방지용
+        #혹 아래 문제시, step이 10이 안된다거나, y_pred,y가 잘못된 상황
         if len(dice_metric_train.get_buffer()) > 0:
             train_dice = dice_metric_train.aggregate().item()
         dice_metric_train.reset()
         return epoch_loss ,epoch_contrastive_loss , train_dice
-
-    max_epoch = config['train_params']['max_epoch']
-    eval_epoch = config['train_params']['eval_epoch']
-    seg_loss_fn, cont_loss_fn = build_loss(config)
-    if config['train_params']['optim_type'] == "AdamW":
-        optimizer = torch.optim.AdamW(model.parameters(), lr=float(config['train_params']['learning_rate']), weight_decay=float(config['train_params']['weight_decay']))
-    elif config['train_params']['optim_type'] == "SGD":
-        optimizer = torch.optim.SGD(model.parameters(), lr=float(config['train_params']['learning_rate']), momentum=0.9)
-    scheduler = LinearWarmupCosineAnnealingLR(optimizer, warmup_epochs=config['train_params']['warmup'], max_epochs=config['train_params']['max_epoch'])
-    scaler = torch.cuda.amp.GradScaler() 
-    post_label = AsDiscrete(to_onehot=config['model_params']['out_channels']) # class n
-    post_pred = AsDiscrete(argmax=True, to_onehot=config['model_params']['out_channels']) # class n
-    dice_metric = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
-    temp_dice_metric = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
-    dice_metric_train = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
-    accumulation_steps = config['train_params']['gradient_accumulation_steps']
-    
-    epoch = 0
-    dice_val_best = 0.0
-    epoch_best = 0
-    epoch_loss_values = []
-    epoch_contrastive_loss_values=[]
-    train_metric_values =[]
-    metric_values = []
-
-    if config['train_params']['resume'] :
-        logger.info("Loading checkpoint...")
-        checkpoint = torch.load(config['train_params']['resume_path'])
-        model.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])  # 스케줄러 상태 복구
-        scaler.load_state_dict(checkpoint['scaler_state_dict'])
-        epoch = checkpoint['epoch']
-        dice_val_best = checkpoint['best_dice']
-        logger.info(f"Resuming from epoch {epoch} with best dice {dice_val_best:.4f}")
     
     # 에포크별 저장한 Dice 값을 기록하기 위한 dict
     saved_checkpoints: dict[int, float] = {}
@@ -334,9 +323,10 @@ def main():
         # flush 호출하여 로그 즉시 기록
         for handler in logging.getLogger().handlers:
             handler.flush()
+        np.savez(os.path.join(output_dir, "training_metrics_temp.npz"),start_epoch=start_epoch,last_epoch=epoch,epoch_loss_values=epoch_loss_values,epoch_contrastive_loss_values=epoch_contrastive_loss_values, metric_values=metric_values, train_metric_values=train_metric_values)
 
     logger.info(f"train completed, best_metric: {dice_val_best:.4f} at epoch: {epoch_best}")
-    np.savez(os.path.join(output_dir, "training_metrics.npz"), epoch_loss_values=epoch_loss_values, metric_values=metric_values, train_metric_values=train_metric_values)
+    np.savez(os.path.join(output_dir, "training_metrics_temp.npz"),start_epoch=start_epoch,last_epoch=epoch,epoch_loss_values=epoch_loss_values,epoch_contrastive_loss_values=epoch_contrastive_loss_values, metric_values=metric_values, train_metric_values=train_metric_values)
 
 # 최종 학습 결과를 WandB에 기록
     wandb.log({"best_metric": dice_val_best, "final_epoch": epoch_best})

@@ -20,26 +20,22 @@ from scipy.spatial import distance
 from monai.transforms import Compose, AsDiscrete, LoadImaged, EnsureChannelFirstd, ScaleIntensityRanged, CropForegroundd, Orientationd, Spacingd, EnsureTyped, RandFlipd,RandShiftIntensityd, RandCropByPosNegLabeld, MapLabelValued,RandScaleIntensityd,RandRotate90d, ToTensord
 from monai.data import (
     PersistentDataset,
-    ThreadDataLoader,
     DataLoader,
     Dataset,
-    CacheDataset,
-    DistributedSampler,
-    list_data_collate,
     load_decathlon_datalist,
     decollate_batch,
     set_track_meta,
 )
-from monai.utils import set_determinism
 from monai.inferers import sliding_window_inference
 
 import sys
 sys.path.append('/data/hyungseok/Swin-UNETR')
 from utils.my_utils import load_config
-from utils.seed import set_seed_and_env, set_all_random_states
-from utils.logger import log_experiment_config, get_logger, setup_logging, save_config_as_json, save_current_code
+from utils.seed import set_seed_and_env, set_all_random_states, worker_init_fn
+from utils.logger import get_logger, setup_logging, save_config_as_json, save_current_code
 parser = argparse.ArgumentParser(description="Swin UNETR training")
 parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/tsne.yaml", help="Path to the YAML config file")
+parser.add_argument('--override', nargs='*', default=[], help="Override config parameters, e.g., train_params.batch_size=4")
 args = parser.parse_args()
 # YAML 설정 파일 로드
 
@@ -49,10 +45,12 @@ config = load_config(config_path)
 from datetime import datetime
 # 테스트 환경 설정
 date = datetime.now().strftime("%Y-%m-%d_%H-%M")
-output_dir = os.path.join("/data/hyungseok/Swin-UNETR/scripts/tsne_debug_analysis",date)
+ckpt_path = config['test_params']['ckpt_dir']
+ckpt_name = os.path.splitext(os.path.basename(ckpt_path))[0]  # "checkpoint_epoch_1300"
+output_dir = os.path.join("/data/hyungseok/Swin-UNETR/scripts/tsne_debug_analysis",date,ckpt_name)
 os.makedirs(output_dir, exist_ok=True)
 setup_logging(output_dir)
-logger = get_logger
+logger = get_logger()
 save_config_as_json(config, output_dir)
 current_script_name = __file__
 save_current_code(output_dir,current_script_name)
@@ -60,6 +58,36 @@ save_current_code(output_dir,current_script_name)
 set_seed_and_env(config)
 USE_CUDA=torch.cuda.is_available()
 device=torch.device("cuda" if USE_CUDA else "cpu")
+set_track_meta(True)
+
+import hashlib
+def compute_cache_key(item, transform_str):
+    """
+    MONAI PersistentDataset의 캐시 키 생성 방식 (유사)
+    """
+    if isinstance(item, dict):
+        input_str = str(item.get("image", "")) + str(item.get("label", "")) + transform_str
+    else:
+        input_str = str(item) + transform_str
+    return hashlib.md5(input_str.encode()).hexdigest()
+
+def validate_persistent_cache(data, transform, cache_dir):
+    transform_str = str(transform)
+    missing = []
+
+    for i, item in enumerate(data):
+        cache_key = compute_cache_key(item, transform_str)
+        cache_path = os.path.join(cache_dir, f"{cache_key}.pt")
+        if not os.path.exists(cache_path):
+            missing.append((i, item.get("image", ""), cache_path))
+
+    if missing:
+        msg = f"❌ Missing {len(missing)} / {len(data)} cache files in {cache_dir}.\n"
+        for i, image_path, cache_path in missing:
+            msg += f"  - [{i}] {os.path.basename(image_path)} → {os.path.basename(cache_path)}\n"
+        raise RuntimeError(msg)
+    else:
+        print(f"✅ All {len(data)} PersistentDataset cache files exist in {cache_dir}.")
 
 def set_loader(config):
     num_samples = config['transforms']['num_samples']
@@ -281,20 +309,47 @@ def set_loader(config):
     lung_datasets = "/data/hyungseok/Swin-UNETR/results/debug/lung_dataset_tsne.json"
     liver_datasets = "/data/hyungseok/Swin-UNETR/results/debug/liver_dataset_tsne.json"
 
-    # CacheDataset 및 DataLoader 구성
+    # 2025-05-12
+    # 기존 위의것은 무작위로 뽑은 애들로 한것인데, 생각해보니 val_transform이면, training은 training_check때 캐시 만들었고, test는 원래 있으니
+    # 아래처럼 진행해볼까함
+    # 이렇게 했을때, Persis 사용으로 속도개선 가능
+    # 그런데 확인시 일단 없어서 그냥 기존 것으로 하는게 나을것 같음 persis는 쓰면서
+    # lung_training_datasets = "/data/hyungseok/Swin-UNETR/results/debug/lung_dataset_train_check.json"
+    # lung_test_datasets = "/data/hyungseok/Swin-UNETR/results/debug/lung_dataset_tsne.json"
+    # liver_training_datasets = "/data/hyungseok/Swin-UNETR/results/debug/liver_dataset_train_check.json"
+    # liver_test_datasets = "/data/hyungseok/Swin-UNETR/results/debug/liver_dataset_tsne.json"
+
+    # # CacheDataset 및 DataLoader 구성
+    # liver_train_files = load_decathlon_datalist(liver_training_datasets, True, "training")
+    # liver_test_files = load_decathlon_datalist(liver_test_datasets, True, "validation")
+    # lung_train_files = load_decathlon_datalist(lung_training_datasets, True, "training")
+    # lung_test_files = load_decathlon_datalist(lung_test_datasets, True, "validation")
+
     liver_train_files = load_decathlon_datalist(liver_datasets, True, "training")
     liver_test_files = load_decathlon_datalist(liver_datasets, True, "validation")
     lung_train_files = load_decathlon_datalist(lung_datasets, True, "training")
     lung_test_files = load_decathlon_datalist(lung_datasets, True, "validation")
     
+    # validate_persistent_cache(data=liver_train_files,transform=liver_val_transforms,cache_dir=config['data']['liver_debug_cache_dir'])
+    # validate_persistent_cache(data=lung_train_files,transform=lung_val_transforms,cache_dir=config['data']['lung_debug_cache_dir'])
+    # validate_persistent_cache(data=liver_test_files,transform=liver_val_transforms,cache_dir=config['data']['liver_test_cache_dir'])
+    # validate_persistent_cache(data=lung_test_files,transform=lung_val_transforms,cache_dir=config['data']['lung_test_cache_dir'])
 
-    liver_train_ds = Dataset(data=liver_train_files, transform=liver_val_transforms)
-    lung_train_ds = Dataset(data=lung_train_files, transform=lung_val_transforms)
-    ### combined_train_dataset = ConcatDataset([liver_train_ds, lung_train_ds])
 
-    liver_test_ds = Dataset(data=liver_test_files, transform=liver_val_transforms)
-    lung_test_ds = Dataset(data=lung_test_files, transform=lung_val_transforms)
-    #### combined_val_dataset = ConcatDataset([liver_val_ds, lung_val_ds])
+
+    liver_train_ds = PersistentDataset(data=liver_train_files, transform=liver_val_transforms,cache_dir=config['data']['liver_tsne_cache_dir'])
+    lung_train_ds = PersistentDataset(data=lung_train_files, transform=lung_val_transforms,cache_dir=config['data']['lung_tsne_cache_dir'])
+    liver_test_ds = PersistentDataset(data=liver_test_files, transform=liver_val_transforms,cache_dir=config['data']['liver_tsne_cache_dir'])
+    lung_test_ds = PersistentDataset(data=lung_test_files, transform=lung_val_transforms,cache_dir=config['data']['lung_tsne_cache_dir'])
+
+
+    # liver_train_ds = Dataset(data=liver_train_files, transform=liver_val_transforms)
+    # lung_train_ds = Dataset(data=lung_train_files, transform=lung_val_transforms)
+    # ### combined_train_dataset = ConcatDataset([liver_train_ds, lung_train_ds])
+
+    # liver_test_ds = Dataset(data=liver_test_files, transform=liver_val_transforms)
+    # lung_test_ds = Dataset(data=lung_test_files, transform=lung_val_transforms)
+    # #### combined_val_dataset = ConcatDataset([liver_val_ds, lung_val_ds])
     
     # liver_train_ds = CacheDataset(data=liver_train_files, transform=liver_train_transforms,cache_rate=1.0)
     # lung_train_ds = CacheDataset(data=lung_train_files, transform=lung_train_transforms,cache_rate=1.0)
@@ -1115,10 +1170,10 @@ def set_model(config):
     model.load_state_dict(torch.load(weight_path, map_location=device)['model_state_dict'], strict=False)
     # model.load_state_dict(torch.load(weight_path, map_location=device))
     model = model.to(device)
-    logging.info(f"Model weights loaded from: {weight_path}")  # 모델 로드 경로 출력
-    logging.info("Loading checkpoint... Well")
+    logger.info(f"Model weights loaded from: {weight_path}")  # 모델 로드 경로 출력
+    logger.info("Loading checkpoint... Well")
     
-    # logging.info("no model loaded")
+    # logger.info("no model loaded")
     return model,  criterion
 
 def resize_label_to_match_feature(label, feature_map):

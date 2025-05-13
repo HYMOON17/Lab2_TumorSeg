@@ -8,7 +8,7 @@ import monai
 import numpy
 from tqdm import tqdm
 import traceback
-
+from typing import Dict, List, Tuple, Any
 # 학습 재개를 위한 체크포인트 저장 함수
 def acc_save_checkpoint(accelerator, model, optimizer, global_step, dice_val_best, global_step_best, epoch_loss_values, metric_values, output_dir):
     if accelerator.is_main_process:
@@ -119,10 +119,53 @@ import yaml
 
 
 ### 1. Config & Seed
-def load_config(config_path: str) -> Dict:
-    with open(config_path, 'r') as file:
-        return yaml.safe_load(file)
+# def load_config(config_path: str) -> Dict:
+#     with open(config_path, 'r') as file:
+#         return yaml.safe_load(file)
 
+def safe_eval(val: str):
+    lowered = val.lower()
+    if lowered == "true":
+        return True
+    elif lowered == "false":
+        return False
+
+    try:
+        return eval(val, {"__builtins__": None}, {})
+    except:
+        return val
+
+def apply_overrides(config: dict, overrides: List[str]) -> dict:
+    """
+    override = ["train_params.batch_size=4", "model_params.img_size=[128,128,128]"]
+    """
+    for item in overrides:
+        if '=' not in item:
+            raise ValueError(f"Invalid override format: {item}")
+        key_str, value_str = item.split("=", 1)
+        keys = key_str.split(".")
+
+        d = config
+        for k in keys[:-1]:
+            if k not in d:
+                raise KeyError(f"Key '{k}' not found in config")
+            d = d[k]
+
+        d[keys[-1]] = safe_eval(value_str)
+    return config
+
+def load_config(path: str, overrides: List[str] = None) -> dict:
+    """
+    - path: path to YAML config
+    - overrides: optional list of "key=value" strings
+    """
+    with open(path, "r") as f:
+        config = yaml.safe_load(f)
+
+    if overrides:
+        config = apply_overrides(config, overrides)
+
+    return config
 
 
 
@@ -202,3 +245,26 @@ class RandInvertIntensityd(RandomizableTransform, MapTransform):
                 d[key] = 1.0 - d[key]
         return d
 
+
+if __name__ == "__main__":
+    import argparse
+    import pprint
+    parser = argparse.ArgumentParser(description="Debug config loading")
+
+    parser.add_argument(
+        '--config', type=str,
+        default="your_config.yaml",   # 실제 config 경로로 바꿔주세요
+        help="Path to the YAML config file"
+    )
+
+    parser.add_argument(
+        '--override', nargs='*', default=[],
+        help="Override config parameters, e.g., train_params.batch_size=4"
+    )
+
+    args = parser.parse_args()
+
+    config = load_config(args.config, overrides=args.override)
+
+    print("\n🔧 Final Config (with overrides if given):")
+    pprint.pprint(config)

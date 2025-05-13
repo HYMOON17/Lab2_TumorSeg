@@ -177,7 +177,11 @@ def save_current_code_wandb(output_dir, current_script_path=None, extra_files=No
     os.makedirs(save_dir, exist_ok=True)
 
     file_list = []
-
+    if current_script_path is None:
+        try:
+            current_script_path = os.path.abspath(__file__)
+        except NameError:
+            current_script_path = os.path.abspath(sys.argv[0])
     # 현재 실행 파일 저장
     if current_script_path:
         dst_path = os.path.join(save_dir, os.path.basename(current_script_path))
@@ -206,9 +210,12 @@ def save_current_code_wandb(output_dir, current_script_path=None, extra_files=No
 
         for file_path in file_list:
             shutil.copy(file_path, tmp_dir)
-        wandb.run.log_code(tmp_dir)
-        logger.info(f"W&B: Logged code from {tmp_dir}")
-        time.sleep(5)  # 업로드 여유
+        if wandb.run is not None:
+            wandb.run.log_code(tmp_dir)
+            logger.info(f"W&B: Logged code from {tmp_dir}")
+            time.sleep(5)  # 업로드 여유
+        else:
+            logger.warning("W&B run is not active. Skipped wandb.run.log_code().")
         shutil.rmtree(tmp_dir)
         logger.info(f"W&B: Temporary code dir removed: {tmp_dir}")
 

@@ -1,19 +1,30 @@
 data:
-  dataset_name : "TSNE_Liver_Lung"
+  dataset_name : "Post_Liver_Lung"
   liver_image_dir: "/data/hyungseok/MSD_liver/imagesTr"
   liver_label_dir: "/data/hyungseok/MSD_liver/processed_labels"
   lung_image_dir: "/data/hyungseok/MSD_lung/imagesTr"
-  lung_label_dir: "/data/hyungseok/MSD_liver/labelsTr"
+  lung_label_dir: "/data/hyungseok/MSD_lung/labelsTr"
   liver_train_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/liver.txt"
   liver_val_image_txt :  "/data/hyungseok/Swin-UNETR/notebook/tempp/liver_val.txt"
   lung_train_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung.txt"
   lung_val_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung_val.txt"
-  liver_test_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/liver_test.txt"
-  lung_test_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung_test.txt"
+  liver_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/train"
+  liver_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/raw"
+  liver_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/raw"
+  liver_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/process"
+  liver_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/train_check"
+  liver_tsne_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/tsne"
+  lung_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/train"
+  lung_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/raw"
+  lung_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/raw"
+  lung_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/process"
+  lung_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/train_check"
+  lung_tsne_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/tsne"
   save_dir: "/data/hyungseok/Swin-UNETR/Experiments/Models"
   log_dir : "/data/hyungseok/Swin-UNETR/Experiments/Logs"
   weights_path: "/data/hyungseok/Swin-UNETR/model_swinvit.pt"
-
+  tmp_dir : "/data/hyungseok/Swin-UNETR/data_cache/tmp"
+  
 transforms:
   num_samples: 4
   spacing : [1.0, 1.0, 1.0]
@@ -62,7 +73,7 @@ train_params:
   resume_path : ""
   lambda_contrast : 0.05
   use_contrastive_loss : false
-  t-sne_path : "/data/hyungseok/Swin-UNETR/Experiments/Models/ContrastiveSwinUNETR-Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-01-24_10-56/best_metric_model.pth"
+  t-sne_path : "/data/hyungseok/Swin-UNETR/Experiments/Models/ContrastiveSwinUNETR-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-04-27_15-53/best_metric_model.pth"
 
 
 test_params :
@@ -122,6 +133,6 @@ accelerator_params:
   kwargs_handlers: True
 
 cuda:
-  CUDA_VISIBLE_DEVICES: "4"   # 사용할 GPU 설정
+  CUDA_VISIBLE_DEVICES: "1"   # 사용할 GPU 설정
   benchmark: True
   deterministic: False

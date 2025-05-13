@@ -119,19 +119,29 @@ def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train
         liver_json = construct_json("train", liver_train_images, liver_train_labels, liver_val_images, liver_val_labels)
         lung_json = construct_json("train", lung_train_images, lung_train_labels, lung_val_images, lung_val_labels)
         
-        with open(os.path.join(output_dir, 'liver_train_dataset.json'), 'w') as f:
+        # with open(os.path.join(output_dir, 'liver_train_dataset.json'), 'w') as f:
+        #     json.dump(liver_json, f)
+        # with open(os.path.join(output_dir, 'lung_train_dataset.json'), 'w') as f:
+        #     json.dump(lung_json, f)
+        
+        # JSON 파일 경로 정의
+        liver_json_path = os.path.join(output_dir, 'liver_train_dataset.json')
+        lung_json_path  = os.path.join(output_dir, 'lung_train_dataset.json')
+
+        # JSON 파일 저장
+        with open(liver_json_path, 'w') as f:
             json.dump(liver_json, f)
-        with open(os.path.join(output_dir, 'lung_train_dataset.json'), 'w') as f:
+        with open(lung_json_path, 'w') as f:
             json.dump(lung_json, f)
 
         # #### For Debug run below - check train is well
         lung_debug_datasets = "/data/hyungseok/Swin-UNETR/results/debug/lung_dataset_train_check.json"
         liver_debug_datasets = "/data/hyungseok/Swin-UNETR/results/debug/liver_dataset_train_check.json"
 
-        liver_train_files = load_decathlon_datalist(liver_json, True, "training")
-        liver_val_files = load_decathlon_datalist(liver_json, True, "validation")
-        lung_train_files = load_decathlon_datalist(lung_json, True, "training")
-        lung_val_files = load_decathlon_datalist(lung_json, True, "validation")
+        liver_train_files = load_decathlon_datalist(liver_json_path, True, "training")
+        liver_val_files = load_decathlon_datalist(liver_json_path, True, "validation")
+        lung_train_files = load_decathlon_datalist(lung_json_path, True, "training")
+        lung_val_files = load_decathlon_datalist(lung_json_path, True, "validation")
         liver_train_debug_files = load_decathlon_datalist(liver_debug_datasets, True, "training")
         lung_train_debug_files = load_decathlon_datalist(lung_debug_datasets, True, "training")
 

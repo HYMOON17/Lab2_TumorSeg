@@ -1,3 +1,11 @@
+'''
+test e2e code
+normally on A100 it cost 30G Gpu
+if gpu is unavailable try sliding window fn change
+sw_device & device diff can reduce gpu cost
+
+'''
+
 import torch
 import json
 import numpy as np
@@ -1360,7 +1368,8 @@ def main():
     set_seed_and_env(config)
     
     # 테스트 환경 설정
-    output_dir = os.path.join(os.path.dirname(config['test_params']['ckpt_dir']), "test_post_vis_result_total_D")
+    ckpt_name = os.path.splitext(os.path.basename(config['test_params']['ckpt_dir']))[0]
+    output_dir = os.path.join(os.path.dirname(config['test_params']['ckpt_dir']), f"test_post_vis_result_total_D{ckpt_name}")
     os.makedirs(output_dir, exist_ok=True)
 
     # 로그 파일 설정
