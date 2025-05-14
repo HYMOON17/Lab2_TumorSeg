@@ -359,6 +359,9 @@ def main():
     plt.close()  # 저장 후 창 닫기
 
 
-
+'''
+python /data/hyungseok/Swin-UNETR/code/train.py \
+  --override test_params.ckpt_dir="/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Post_Lung-lr1e-4-bs3-lossDiceCELoss-patch64x64x64/2025-04-09_21-03/best_metric_model.pth"
+'''
 if __name__ == "__main__": 
     main()

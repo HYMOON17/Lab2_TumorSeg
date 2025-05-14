@@ -3,9 +3,14 @@ from monai.transforms import (Compose, LoadImaged, EnsureChannelFirstd, ScaleInt
                               FgBgToIndicesd,RandCropByPosNegLabeld,RandFlipd,RandRotate90d,RandScaleIntensityd,RandShiftIntensityd,
                               Spacingd, EnsureTyped, AsDiscrete,AsDiscreted,ToTensord,MapLabelValued, Invertd)
 from typing import Dict, List, Union
-from utils.seed import set_all_random_states
 from monai.data import decollate_batch
 from monai.handlers.utils import from_engine
+
+# for debug
+# import sys
+# sys.path.append("/data/hyungseok/Swin-UNETR")  # 루트 디렉토리
+
+from utils.seed import set_all_random_states
 
 ### 3. Transform & Dataset
 def get_test_transforms(config: Dict, organs: Union[str, List[str]],is_train: bool):
@@ -160,6 +165,7 @@ def get_test_transforms(config: Dict, organs: Union[str, List[str]],is_train: bo
                 prob=config['transforms']['lung']['rand_shift_intensity_prob'],
             ),
             # MapLabelValued(keys="label", orig_labels=[1], target_labels=[2]),  # 종양을 2로 설정
+            *([MapLabelValued(keys="label", orig_labels=[1], target_labels=[2])] if config['transforms']['lung'].get('apply_maplabel', False) else []),
             EnsureTyped(keys=["image", "label"]),  # ✅ MetaTensor 변환 추가
         ]
     )
@@ -214,6 +220,7 @@ def get_test_transforms(config: Dict, organs: Union[str, List[str]],is_train: bo
                     keys=["image"], a_min=config['transforms']['lung']['a_min'], a_max=config['transforms']['lung']['a_max'], b_min=0.0, b_max=1.0, clip=True
                 ),
                 CropForegroundd(keys=["image"], source_key="image"),
+                *([MapLabelValued(keys="label", orig_labels=[1], target_labels=[2])] if config['transforms']['lung'].get('apply_maplabel', False) else []),
                 EnsureTyped(keys=["image", "label"]),
             ]
         )
@@ -236,10 +243,13 @@ def get_test_transforms(config: Dict, organs: Union[str, List[str]],is_train: bo
             # MapLabelValued(keys="label", orig_labels=[0, 1, 2], target_labels=[0, 0, 1]),
             CropForegroundd(keys=["image", "label"], source_key="image"),
             # MapLabelValued(keys="label", orig_labels=[1], target_labels=[2]),  # 종양을 2로 설정
+            *([MapLabelValued(keys="label", orig_labels=[1], target_labels=[2])] if config['transforms']['lung'].get('apply_maplabel', False) else []),
             EnsureTyped(keys=["image", "label"]),
         ]
     )
+    #*([MapLabelValued(keys="label",orig_labels=[0, 1], target_labels=[2, 3])] if config['transforms']['lung'].get('apply_maplabel', False) else [])
 
+    # post_pred의 경우 image와 관련된것만 잘 정의하면 되고, 다만 config['model_params']['out_channels']는 틀리면 안됨
     liver_post_pred = Compose([
         Invertd(
             keys="pred",  # 예측값에만 Invertd 적용
@@ -332,3 +342,29 @@ def postprocess(batch, post_pred_transform):
     test_labels_convert =test_labels_convert[0].unsqueeze(0)
    
     return test_outputs_convert, test_labels_convert
+
+if __name__ == "__main__":
+    import yaml
+    from pprint import pprint
+
+    # 테스트용 config 경로
+    config_path = "/data/hyungseok/Swin-UNETR/api/exp_cont.yaml"  # ← 네 config 파일 경로로 바꿔라
+
+    # config 로드
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    # transform 가져오기
+    tf_dict = get_test_transforms(config, organs=["lung"], is_train=True)
+
+    # 확인
+    lung_tf_list = tf_dict["lung"]["first_tf"].transforms
+    print("\n[✓] Loaded lung transform list:")
+    for idx, tf in enumerate(lung_tf_list):
+        print(f"{idx:02d}: {type(tf).__name__}")
+
+    # MapLabelValued 포함 여부 체크
+    if any(isinstance(t, MapLabelValued) for t in lung_tf_list):
+        print("\n✅ MapLabelValued is applied.")
+    else:
+        print("\n❌ MapLabelValued is NOT applied.")

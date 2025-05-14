@@ -50,6 +50,7 @@ transforms:
     rand_scale_intensity_prob : 0.1
     rand_shift_intensity_offset : 0.1
     rand_shift_intensity_prob : 0.1
+    apply_maplabel : False
 
 train_params:
   batch_size: 1                    # 배치 사이즈         #### NAME

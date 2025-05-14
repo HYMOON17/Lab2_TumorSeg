@@ -1,5 +1,5 @@
 data:
-  dataset_name : "Liver_Lung"             #### NAME
+  dataset_name : "Post_Liver_Lung"
   liver_image_dir: "/data/hyungseok/MSD_liver/imagesTr"
   liver_label_dir: "/data/hyungseok/MSD_liver/processed_labels"
   lung_image_dir: "/data/hyungseok/MSD_lung/imagesTr"
@@ -8,6 +8,16 @@ data:
   liver_val_image_txt :  "/data/hyungseok/Swin-UNETR/notebook/tempp/liver_val.txt"
   lung_train_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung.txt"
   lung_val_image_txt : "/data/hyungseok/Swin-UNETR/notebook/tempp/lung_val.txt"
+  liver_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/train"
+  liver_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/raw"
+  liver_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/raw"
+  liver_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/test/process"
+  liver_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Liver/val/train_check"
+  lung_train_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/train"
+  lung_val_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/raw"
+  lung_test_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/raw"
+  lung_label_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/test/process"
+  lung_debug_cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung/Lung/val/train_check"
   save_dir: "/data/hyungseok/Swin-UNETR/Experiments/Models"
   log_dir : "/data/hyungseok/Swin-UNETR/Experiments/Logs"
   weights_path: "/data/hyungseok/Swin-UNETR/model_swinvit.pt"
@@ -40,45 +50,45 @@ transforms:
     rand_scale_intensity_prob : 0.1
     rand_shift_intensity_offset : 0.1
     rand_shift_intensity_prob : 0.1
+    apply_maplabel : true
 
 train_params:
-  batch_size: 3                    # 배치 사이즈         #### NAME
+  batch_size: 1                    # 배치 사이즈         #### NAME
   val_batch_size: 1                    # 배치 사이즈
-  num_workers : 0
+  num_workers : 8
+  val_num_workers : 4
   pin_memory : True
-  max_epoch: 800             # 최대 반복 횟수
-  eval_epoch: 20                     # 검증 주기
-  save_epoch: 25                     # 저장 주기
+  max_epoch: 2000             # 최대 반복 횟수
+  eval_epoch: 25                     # 검증 주기
+  save_epoch: 50                     # 저장 주기
   seed: 1234                        # 랜덤 시드
   spatial_size: [64, 64, 64]          # 이미지 패치 크기         #### NAME
   num_samples: 4                    # 샘플 수 (데이터 증강 시)
-  loss_type: "DiceCELoss+Cont3"           # 손실 함수 종류         #### NAME
+  loss_type: "DiceCELoss+Cont1"           # 손실 함수 종류         #### NAME
   optim_type: "AdamW"               # 옵티마이저 종류
-  learning_rate: 8e-4               # 학습률                #### NAME
+  learning_rate: 1e-4               # 학습률                #### NAME
   weight_decay: 1e-5
-  warmup : 20
+  warmup : 100
   resume : False
-  # resume_path : "/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Liver_Lung-lr1e-4-bs8-lossDiceCELoss-patch64x64x64/2024-10-15_22-56/best_metric_model.pth"
-  # resume_path : "/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Liver_Lung-lr1e-4-bs8-lossDiceCELoss-patch64x64x64/2024-10-17_15-51/best_metric_model.pth"
   resume_path : ""
-  t-sne_path : "/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Liver_Lung-lr1e-4-bs8-lossDiceCELoss-patch64x64x64/2024-10-17_15-51/best_metric_model.pth"
-  lambda_contrast : 0.01
-  use_contrastive_loss : True
-  gradient_accumulation_steps : 1
-  
+  lambda_contrast : 0.05
+  use_contrastive_loss : true
+  gradient_accumulation_steps : 3
+
 CONTRASTIVE:
   TEMPERATURE : 0.07
   MAX_VIEWS : 256
   MAX_SAMPLES : 256
   BASE_TEMPERATURE : 0.07
-  QUEUE_SIZE : 5120
+  QUEUE_SIZE : 2560
   DIM : 128
   NUM_CLASSES : 3
-  MODE : 3
-  PIXEL_UPDATE_FREQ : 100
+  MODE : 1
+  PIXEL_UPDATE_FREQ : 32
+
 
 model_params:
-  type : "SwinUnetr_segheadsp"                # ContrastiveSwinUNETR         #### NAME
+  type : "ContrastiveSwinUNETR"
   img_size: [64, 64, 64]            # 입력 이미지 크기
   in_channels: 1                    # 입력 채널 수
   out_channels: 3                   # 출력 채널 수
@@ -87,14 +97,21 @@ model_params:
 
 wandb:
   project_name: "Medseg_train"      # WandB 프로젝트 이름
-  experiment_name: "ContrastiveSwinUNETRsegheadsp_exp_mode3fix_label3" # wandb run 이름
-  group: "ContrastiveSwinUNETRsegheadsp"               # WandB 그룹
+  experiment_name: "ContrastiveSwinUNETR_exp_post_a100" # wandb run 이름
+  group: "ContrastiveSwinUNETR"               # WandB 그룹
   mode: "offline"                    # WandB 모드 (online, offline, disabled)
-  log_code: True                    # 코드 저장 여부 (소스 파일)
+  log_code: true                    # 코드 저장 여부 (소스 파일)
   sync_tensorboard: False            # TensorBoard와 동기화 여부
 
+accelerator_params:
+  gradient_accumulation_steps: 1
+  mixed_precision: "fp16"           # 혼합 정밀도 학습 설정
+  log_with: ["wandb", "tensorboard"]  # 로그 툴 설정
+  kwargs_handlers: True
+
 cuda:
-  CUDA_VISIBLE_DEVICES: "5"   # 사용할 GPU 설정
-  benchmark: True
-  deterministic: False
+  CUDA_VISIBLE_DEVICES: [4]   # 사용할 GPU 설정
+  benchmark: False
+  deterministic: true
   dist : False
+  mode : "server"

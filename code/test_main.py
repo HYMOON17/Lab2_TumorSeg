@@ -5,7 +5,7 @@ if gpu is unavailable try sliding window fn change
 sw_device & device diff can reduce gpu cost
 
 '''
-
+import argparse
 import torch
 import json
 import numpy as np
@@ -1363,8 +1363,22 @@ def evaluate_dataset(model, dataloader, post_transforms, organ: str, config: Dic
     """
     pass
 
+####
+'''
+python /data/hyungseok/Swin-UNETR/code/test_main.py \
+  --override test_params.ckpt_dir="/data/hyungseok/Swin-UNETR/Experiments/Models/SwinUnetr-Post_Lung-lr1e-4-bs3-lossDiceCELoss-patch64x64x64/2025-04-09_21-03/best_metric_model.pth"
+'''
+####
 def main():
-    config = load_config("/data/hyungseok/Swin-UNETR/api/test.yaml")
+    parser = argparse.ArgumentParser(description="Swin UNETR training")
+    parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/test.yaml", help="Path to the YAML config file")
+    parser.add_argument('--override', nargs='*', default=[], help="Override config parameters, e.g., train_params.batch_size=4")
+    args = parser.parse_args()
+
+    # 학습 설정 로드
+    config_path = args.config
+    config = load_config(config_path, overrides=args.override)
+
     set_seed_and_env(config)
     
     # 테스트 환경 설정
