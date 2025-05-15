@@ -32,7 +32,7 @@ git add .
 git commit -m "[refactor](folder)" \
             -m "resume시, 경로 위치 인식 못하는 문제 해결 위해 디렉토리 이름 변경
 • codefiles내 init.py추가
-• 이전 docs 업데이트 못한것 추가
+• 이전 docs 업데이트 못한것 추가"
 
 ```
 

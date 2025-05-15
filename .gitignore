@@ -152,7 +152,6 @@ Experiments/
 
 # 이전 깃클론땜에 파일들
 assets/
-config/
 notebook/
 results/
 scripts/
@@ -163,7 +162,7 @@ model_swinvit.pt
 inferer.py
 README_past.md
 past/
-api/background/
+api/
 
 # 모델 파일
 *.pth

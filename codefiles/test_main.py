@@ -21,9 +21,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import nibabel as nib
 from monai.visualize import blend_images
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import sys
-sys.path.append('/data/hyungseok/Swin-UNETR')
+from config.config_manager import EnvConfigManager
+cfg_mgr = EnvConfigManager()
+cfg_mgr.prepend_root_to_sys_path()
 from utils.logger import setup_logging, get_logger, save_config_as_json, save_current_code
 from utils.my_utils import load_config
 from utils.seed import set_seed_and_env, worker_init_fn

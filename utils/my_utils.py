@@ -167,6 +167,25 @@ def load_config(path: str, overrides: List[str] = None) -> dict:
 
     return config
 
+import socket
+
+def get_primary_ip():
+    """외부 라우팅을 기준으로 서버가 사용하는 IP"""
+    try:
+        # 임의의 외부 주소와 소켓 연결을 시도해 서버의 실제 IP 추론
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))  # 실제로 연결되진 않음
+        ip = s.getsockname()[0]
+        # ip는 115.145.145.167 이런형태
+        s.close()
+        return ip[-3:]
+    except Exception:
+        return "000"
+
+def resolve_data_path(config: dict,path: str) -> str:
+    if "<data_root>" in path:
+        return path.replace("<data_root>", config(f"{get_primary_ip()}.data_root"))
+    return path
 
 
 import glob

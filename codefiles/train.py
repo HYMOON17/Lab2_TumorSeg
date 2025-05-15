@@ -28,8 +28,13 @@ from monai.handlers.utils import from_engine
 from monai.inferers import sliding_window_inference
 from monai.metrics import DiceMetric
 from monai.config import print_config
-import sys
-sys.path.append('/data/hyungseok/Swin-UNETR')
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from config.config_manager import EnvConfigManager
+cfg_mgr = EnvConfigManager()
+cfg_mgr.prepend_root_to_sys_path()
+
 from utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from utils.my_utils import load_config, prune_checkpoints
 from utils.seed import set_seed_and_env

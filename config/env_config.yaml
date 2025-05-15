@@ -1,0 +1,29 @@
+current_server: 215
+
+servers:
+  215: # A100
+    root_dir: "/data/hyungseok/Swin-UNETR"
+    txt_dir: "/data/hyungseok/Swin-UNETR/notebook/tempp"
+    liver_dir : "/data/hyungseok/MSD_liver"
+    lung_dir : "/data/hyungseok/MSD_lung"
+    cache_dir : "/data/hyungseok/Swin-UNETR/data_cache/Liver_Lung"
+    weight_path : "/data/hyungseok/Swin-UNETR/model_swinvit.pt"
+    tmp_dir : "/data/hyungseok/Swin-UNETR/data_cache/tmp"
+    
+  167: # Local
+    root_dir: "/data/Swin-Unetr/Swin-UNETR"
+    txt_dir: "/data/Swin-Unetr/Swin-UNETR/notebook/server/txt"
+    liver_dir : "/data/Medical_Segmentation_Decathlon/Task03_Liver"
+    lung_dir : "/data/Medical_Segmentation_Decathlon/Task06_Lung"
+    cache_dir : null  #no need
+    weight_path : "/data/Swin-Unetr/Swin-UNETR/data/model_swinvit.pt"
+    tmp_dir : "/data/Swin-Unetr/Swin-UNETR/data/cache"
+
+  129: #4090_2
+    root_dir: "/data/hyungseok/experiment/Swin-UNETR"
+    txt_dir: "/data/hyungseok/experiment/Swin-UNETR/data/txt"
+    liver_dir : "/data/hyungseok/dataset/MSD/Dataset003_Liver"
+    lung_dir : "/data/hyungseok/dataset/MSD/Dataset006_Lung"
+    cache_dir : null # not determined
+    weight_path : "/data/hyungseok/experiment/Swin-UNETR/data/model_swinvit.pt"
+    tmp_dir : "/data/hyungseok/experiment/Swin-UNETR/data/cache"
