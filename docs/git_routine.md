@@ -29,14 +29,15 @@ git add file1.py file2.yaml
 git add .
 
 # 커밋
-git commit -m "[모듈명] 한줄 설명 (ex: [train] loss 추가 및 config 수정)"
+git commit -m "[refactor](folder)" \
+            -m "resume시, 경로 위치 인식 못하는 문제 해결 위해 디렉토리 이름 변경
+• codefiles내 init.py추가
+• 이전 docs 업데이트 못한것 추가
+
 ```
 
 * 커밋 메시지 규칙:
-
-  * `[폴더/기능명] 핵심 변경 요약`
-  * 예: `[loader] Liver/Lung 분기 구조 개선`, `[tsne] 분석 함수 디버깅`
-
+    아래 상세 내용 참고
 ---
 
 ## ✅ 3. 커밋 후 푸시

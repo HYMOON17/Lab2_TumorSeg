@@ -59,7 +59,7 @@
 PYTHON_PATH="/home/hsmoon/anaconda3/envs/swin_unetr/bin/python"
 
 # 학습 스크립트 경로
-SCRIPT_PATH="/data/hyungseok/Swin-UNETR/notebook/tempp/temppp_0401/persistent_check_iter_classy.py"
+SCRIPT_PATH="/data/hyungseok/Swin-UNETR/Experiments/Logs/ContrastiveSwinUNETR-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-05-13_02-38/save_code/train.py"
 # "/data/hyungseok/Swin-UNETR/notebook/tempp/temppp_0401/persistent_post_lung.py"
 # "/data/hyungseok/Swin-UNETR/Experiments/Logs/SwinUnetr-DEBUG_Liver_Lung-lr1e-4-bs3-lossDiceCELoss-patch64x64x64/2025-04-03_10-43/save_code/persistent_check_iter_classy.py"
 # "/data/hyungseok/Swin-UNETR/Experiments/Logs/BalancedContrastiveSwinUNETR-Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-02-05_17-30/save_code/Swin_UNETR_MSD_Liver_Lung_bcl.py"
@@ -69,7 +69,7 @@ SCRIPT_PATH="/data/hyungseok/Swin-UNETR/notebook/tempp/temppp_0401/persistent_ch
 # "/data/hyungseok/Swin-UNETR/notebook/Swin_UNETR_MSD_Lung_sol.py"
             
 # Config 파일 경로
-CONFIG_PATH="/data/hyungseok/Swin-UNETR/api/exp.yaml"
+CONFIG_PATH="/data/hyungseok/Swin-UNETR/Experiments/Logs/ContrastiveSwinUNETR-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-05-13_02-38/config.json"
 # "/data/hyungseok/Swin-UNETR/Experiments/Logs/ContrastiveSwinUNETR-Post_Liver_Lung-lr1e-4-bs1-lossDiceCELoss+Cont1-patch64x64x64/2025-04-25_21-23/config.json"
 # "/data/hyungseok/Swin-UNETR/Experiments/Logs/SwinUnetr-Post_Liver_Lung-lr1e-4-bs2-lossTverskyLoss-patch64x64x64/2025-04-16_21-44/config.json"
 # "/data/hyungseok/Swin-UNETR/api/lung.yaml"
@@ -80,7 +80,7 @@ CONFIG_PATH="/data/hyungseok/Swin-UNETR/api/exp.yaml"
 # "/data/hyungseok/Swin-UNETR/api/liver.yaml"
 
 # Resume 여부 설정
-RESUME=false
+RESUME=true
 
 # 실행 시간 생성
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
