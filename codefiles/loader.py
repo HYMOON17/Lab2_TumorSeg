@@ -73,14 +73,20 @@ def construct_json(mode: str, images: List[str], labels: List[str],
             "test": [{"image": i, "label": l} for i, l in zip(images, labels)]
         }
 
-def select_dataset_class(config: Dict) -> type:
-    # 후에 확장해서 아예 Dataset자체를 반환토록
-    if config['cuda']['mode'] == 'server':
-        return PersistentDataset
-    elif config['cuda']['mode'] == 'local':
-        return CacheDataset
-    else:
-        return Dataset
+def dataset_factory(server_id: int):
+    if server_id in [215, 129]:  # PersistentDataset
+        def create_dataset(data, transform, cache_dir=None):
+            return PersistentDataset(data=data, transform=transform, cache_dir=cache_dir)
+    elif server_id == 167:  # CacheDataset
+        def create_dataset(data, transform, cache_dir=None):
+            return CacheDataset(data=data, transform=transform, cache_rate=1.0, num_workers=4)
+    else:  # Default Dataset
+        def create_dataset(data, transform, cache_dir=None):
+            return Dataset(data=data, transform=transform)
+    return create_dataset
+
+
+
     
 def modify_cache_dir(base_dir: str, organ: str, apply_label3: bool) -> str:
     '''
@@ -97,13 +103,13 @@ def modify_cache_dir(base_dir: str, organ: str, apply_label3: bool) -> str:
     return "/" + "/".join(parts)
 
 
-def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train:bool,mode:str=None) -> Dict[str, Dict[str, DataLoader]]:
+def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train:bool,mode:str=None,server_id:int=None) -> Dict[str, Dict[str, DataLoader]]:
     '''
     2025-05-07
     장기에 따라 각각 진행토록 바꾸고 싶은데, 그전까지만 진행
     '''
     dataloaders = {}
-    dataset_class = select_dataset_class(config)
+    create_dataset = dataset_factory(server_id)
     # cache 없을경우 문제발생
 
     # 이미지 및 레이블 경로가 저장된 txt 파일을 불러오기 (과거)
@@ -144,8 +150,8 @@ def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train
             json.dump(lung_json, f)
 
         # #### For Debug run below - check train is well
-        lung_debug_datasets = "/data/hyungseok/Swin-UNETR/results/debug/lung_dataset_train_check.json"
-        liver_debug_datasets = "/data/hyungseok/Swin-UNETR/results/debug/liver_dataset_train_check.json"
+        lung_debug_datasets = config['data']['lung_train_check_json']
+        liver_debug_datasets = config['data']['liver_train_check_json']
 
         liver_train_files = load_decathlon_datalist(liver_json_path, True, "training")
         liver_val_files = load_decathlon_datalist(liver_json_path, True, "validation")
@@ -166,12 +172,12 @@ def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train
         lung_train_check_cache_dir = modify_cache_dir(config['data']['lung_debug_cache_dir'], organ="lung", apply_label3=apply_label3)
 
 
-        liver_train_ds = dataset_class(data=liver_train_files, transform=liver_train_tf, cache_dir=liver_train_cache_dir)
-        lung_train_ds = dataset_class(data=lung_train_files, transform=lung_train_tf, cache_dir=lung_train_cache_dir)
-        liver_val_ds = dataset_class(data=liver_val_files, transform=liver_val_tf, cache_dir=liver_val_cache_dir)
-        lung_val_ds = dataset_class(data=lung_val_files, transform=lung_val_tf, cache_dir=lung_val_cache_dir)
-        liver_train_check_ds = PersistentDataset(data=liver_train_debug_files, transform=liver_val_tf,cache_dir=liver_train_check_cache_dir)
-        lung_train_check_ds = PersistentDataset(data=lung_train_debug_files, transform=lung_val_tf,cache_dir=lung_train_check_cache_dir)
+        liver_train_ds = create_dataset(data=liver_train_files, transform=liver_train_tf, cache_dir=liver_train_cache_dir)
+        lung_train_ds = create_dataset(data=lung_train_files, transform=lung_train_tf, cache_dir=lung_train_cache_dir)
+        liver_val_ds = create_dataset(data=liver_val_files, transform=liver_val_tf, cache_dir=liver_val_cache_dir)
+        lung_val_ds = create_dataset(data=lung_val_files, transform=lung_val_tf, cache_dir=lung_val_cache_dir)
+        liver_train_check_ds = create_dataset(data=liver_train_debug_files, transform=liver_val_tf,cache_dir=liver_train_check_cache_dir)
+        lung_train_check_ds = create_dataset(data=lung_train_debug_files, transform=lung_val_tf,cache_dir=lung_train_check_cache_dir)
 
         liver_val_loader = DataLoader(liver_val_ds, batch_size=config['train_params']['val_batch_size'],
                                       num_workers=config['train_params']['val_num_workers'], pin_memory=True,
@@ -179,7 +185,7 @@ def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train
         lung_val_loader = DataLoader(lung_val_ds, batch_size=config['train_params']['val_batch_size'],
                                      num_workers=config['train_params']['val_num_workers'], pin_memory=True,
                                      worker_init_fn=worker_init_fn)
-        
+    
         liver_train_check_loader = DataLoader(liver_train_check_ds, batch_size=config['train_params']['val_batch_size'], 
         num_workers=config['train_params']['val_num_workers'], pin_memory=config['train_params']['pin_memory'],
         worker_init_fn=worker_init_fn)
@@ -236,6 +242,7 @@ def load_datalist(config: Dict, transform_dict : Dict, output_dir: str, is_train
         liver_test_transforms, liver_label_transforms = transform_dict["liver"]["first_tf"], transform_dict["liver"]["second_tf"]
         lung_test_transforms, lung_label_transforms = transform_dict["lung"]["first_tf"], transform_dict["lung"]["second_tf"]
 
+        # train like create dataset but label3 matters
         liver_test_ds = Dataset(data=liver_test_files, transform=liver_test_transforms)
         lung_test_ds = Dataset(data=lung_test_files, transform=lung_test_transforms)
         #Overlay용

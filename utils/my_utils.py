@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--config', type=str,
-        default="your_config.yaml",   # 실제 config 경로로 바꿔주세요
+        default="config/exp.yaml",   # 실제 config 경로로 바꿔주세요
         help="Path to the YAML config file"
     )
 

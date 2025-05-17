@@ -11,13 +11,13 @@ servers:
     tmp_dir : "/data/hyungseok/Swin-UNETR/data_cache/tmp"
     
   167: # Local
-    root_dir: "/data/Swin-Unetr/Swin-UNETR"
-    txt_dir: "/data/Swin-Unetr/Swin-UNETR/notebook/server/txt"
+    root_dir: "/data/Swin-Unetr/new_swinunetr"
+    txt_dir: "/data/Swin-Unetr/new_swinunetr/data/txt"
     liver_dir : "/data/Medical_Segmentation_Decathlon/Task03_Liver"
     lung_dir : "/data/Medical_Segmentation_Decathlon/Task06_Lung"
     cache_dir : null  #no need
-    weight_path : "/data/Swin-Unetr/Swin-UNETR/data/model_swinvit.pt"
-    tmp_dir : "/data/Swin-Unetr/Swin-UNETR/data/cache"
+    weight_path : "/data/Swin-Unetr/new_swinunetr/data/model_swinvit.pt"
+    tmp_dir : "/data/Swin-Unetr/new_swinunetr/data/cache"
 
   129: #4090_2
     root_dir: "/data/hyungseok/experiment/Swin-UNETR"

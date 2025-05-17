@@ -8,6 +8,8 @@ data:
   liver_val_image_txt :  "<txt_dir>/liver_val.txt"
   lung_train_image_txt : "<txt_dir>/lung.txt"
   lung_val_image_txt : "<txt_dir>/lung_val.txt"
+  liver_train_check_json: "<txt_dir>/liver_dataset_train_check.json"
+  lung_train_check_json: "<txt_dir>/lung_dataset_train_check.json"
   liver_train_cache_dir : "<cache_dir>/Liver/train"
   liver_val_cache_dir : "<cache_dir>/Liver/val/raw"
   liver_test_cache_dir : "<cache_dir>/Liver/test/raw"

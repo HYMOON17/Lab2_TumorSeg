@@ -34,7 +34,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from config.config_manager import EnvConfigManager
 cfg_mgr = EnvConfigManager()
 cfg_mgr.prepend_root_to_sys_path()
-
+ROOT_DIR = cfg_mgr.project_root()
+server_id = cfg_mgr.server_id
 from utils.lr_scheduler import LinearWarmupCosineAnnealingLR
 from utils.my_utils import load_config, prune_checkpoints
 from utils.seed import set_seed_and_env
@@ -46,14 +47,14 @@ from losses.build_loss import build_loss
 def main():
     
     parser = argparse.ArgumentParser(description="Swin UNETR training")
-    parser.add_argument('--config', type=str, default="/data/hyungseok/Swin-UNETR/api/exp_cont.yaml", help="Path to the YAML config file")
+    parser.add_argument('--config', type=str, default=str(ROOT_DIR/"config/exp.yaml"), help="Path to the YAML config file")
     parser.add_argument('--override', nargs='*', default=[], help="Override config parameters, e.g., train_params.batch_size=4")
     args = parser.parse_args()
 
     # 학습 설정 로드
     config_path = args.config
     config = load_config(config_path, overrides=args.override)
-
+    config = cfg_mgr.resolve_config(config)  # 실제 경로로 치환 완료
     # 학습환경 설정
     set_seed_and_env(config)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,7 +99,7 @@ def main():
     # ### Dataset
     set_track_meta(True)
     # iter아닌 경우 mode에 base박으셈
-    dataloader = load_datalist(config, transform_dict= tf_dict, output_dir=output_dir,is_train=True,mode=None)
+    dataloader = load_datalist(config, transform_dict= tf_dict, output_dir=output_dir,is_train=True,mode=None,server_id=server_id)
     
 
     #### Model

@@ -7,16 +7,20 @@ class EnvConfigManager:
     def __init__(self, config_path: str = None):
         # 1) 로드할 YAML 경로
         if config_path is None:
-            # 파일 위치에 따라 적절히 조정
+            ## 파일 위치에 따라 적절히 조정
             config_path = os.path.join(
                 os.path.dirname(__file__),
                 os.pardir, "config", "env_config.yaml"
             )
+            # config_path = os.path.join(
+            #     os.path.dirname(__file__),
+            #     "env_config.yaml"
+            # )
         with open(config_path, "r") as f:
             self._env = yaml.safe_load(f)
 
         # 2) 현재 서버 ID 감지
-        self.server_id = self._detect_server()
+        self.server_id = int(self._detect_server())
         self.server_cfg = self._env.get("servers", {}).get(self.server_id, {})
         if not self.server_cfg:
             raise KeyError(
@@ -37,14 +41,27 @@ class EnvConfigManager:
         except Exception:
             return "000"
 
-    def get(self, key: str, default=None):
-        """서버 설정에서 키 조회, fallback 지원"""
+    # def get(self, key: str, default=None):
+    #     """서버 설정에서 키 조회, fallback 지원"""
+    #     value = self.server_cfg.get(key, default)
+    #     if value is None:
+    #         raise KeyError(
+    #             f"⚠️ '{key}'가 서버 [{self.server_id}] 설정에 없고, 기본값도 지정되지 않았습니다."
+    #         )
+    #     return value
+
+    def get(self, key: str, default=None, allow_null: bool = False):
+        #     """서버 설정에서 키 조회, fallback 지원"""
         value = self.server_cfg.get(key, default)
+
         if value is None:
+            if allow_null:
+                return ""
             raise KeyError(
                 f"⚠️ '{key}'가 서버 [{self.server_id}] 설정에 없고, 기본값도 지정되지 않았습니다."
             )
         return value
+
 
     @property
     def project_root(self):
@@ -64,7 +81,7 @@ class EnvConfigManager:
 
     @property
     def cache_root(self):
-        return self.get("cache_dir")
+        return self.get("cache_dir", allow_null=True)  # ✅ null 허용
     
     @property
     def weight_path(self):
@@ -73,6 +90,25 @@ class EnvConfigManager:
     @property
     def tmp_dir(self):
         return self.get("tmp_dir")
+
+    def resolve_config(self, config: dict) -> dict:
+        """
+        전체 config dict 내부의 문자열 중 <...> 패턴이 포함된 값을 resolve()로 치환.
+        """
+        def resolve_recursive(obj):
+            if isinstance(obj, str):
+                if "<" in obj and ">" in obj:  # 토큰 포함된 문자열만 처리
+                    return self.resolve(obj)
+                else:
+                    return obj
+            elif isinstance(obj, dict):
+                return {k: resolve_recursive(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [resolve_recursive(i) for i in obj]
+            else:
+                return obj
+
+        return resolve_recursive(config)
 
     # 통합 경로 치환 함수
     def resolve(self, path: str) -> str:
@@ -129,3 +165,31 @@ class EnvConfigManager:
         root = self.project_root
         if root not in sys.path:
             sys.path.append(root)
+
+if __name__ == "__main__":
+    import argparse
+    import pprint
+    import sys, os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    from utils.my_utils import load_config
+
+    cfg_mgr = EnvConfigManager()
+    parser = argparse.ArgumentParser(description="Debug config loading")
+
+    parser.add_argument(
+        '--config', type=str,
+        default="config/exp.yaml",   # 실제 config 경로로 바꿔주세요
+        help="Path to the YAML config file"
+    )
+
+    parser.add_argument(
+        '--override', nargs='*', default=[],
+        help="Override config parameters, e.g., train_params.batch_size=4"
+    )
+
+    args = parser.parse_args()
+    
+    config = load_config(args.config, overrides=args.override)
+    config = cfg_mgr.resolve_config(config)  # 실제 경로로 치환 완료
+    # print("\n🔧 Final Config (with overrides if given):")
+    pprint.pprint(config)
